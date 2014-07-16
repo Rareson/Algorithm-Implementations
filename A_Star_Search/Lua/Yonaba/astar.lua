@@ -15,8 +15,7 @@
 -- This ensures flexibility, so that the generic algorithm can be adapted to
 -- search on any kind of space.
 -- The passed-in handler should implement those functions.
--- handler.makeNode(...)   -> creates a Node with custom attributes
---                           (instance of node.lua)
+-- handler.getNode(...)   ->  returns a Node (instance of node.lua)
 -- handler.distance(a, b)  -> heuristic function which returns the distance
 --                            between node a and node b
 -- handler.getNeighbors(n) -> returns an array of all nodes that can be reached
@@ -34,19 +33,20 @@
 -- See custom handlers for reference (*_hander.lua).
 
 -- Dependencies
-local class = require 'class'
-local bheap = require 'bheap'
+local class = require 'utils.class'
+local bheap = require 'utils.bheap'
 
--- Clears nodes data between consecutive path requests.
-local function clearNodes(astar)
+-- Clears data between consecutive path requests.
+local function resetForNextSearch(astar)
   for node in pairs(astar.visited) do
     node.parent, node.opened, node.closed = nil, nil, nil
     node.f, node.g, node.h = 0, 0, 0
   end
+  astar.openList:clear()  
   astar.visited = {}
 end
 
--- Builds an returns the path to the goal node
+-- Builds and returns the path to the goal node
 local function backtrace(node)
   local path = {}
   repeat
@@ -66,11 +66,11 @@ function Astar:initialize(handler)
 end
 
 -- Returns the path between start and goal locations
+-- start  : a Node representing the start location
+-- goal   : a Node representing the target location
+-- returns: an array of nodes
 function Astar:findPath(start, goal)
-  start = self.handler.makeNode(start)
-  goal = self.handler.makeNode(goal)
-  self.openList:clear()
-  clearNodes(self)
+  resetForNextSearch(self)
 
   start.g = 0
   start.h = self.heuristic(start, goal)
@@ -85,7 +85,7 @@ function Astar:findPath(start, goal)
     local neighbors = self.handler.getNeighbors(node)
     for _, neighbor in ipairs(neighbors) do
       if not neighbor.closed then
-        local tentative_g = neighbor.g + self.heuristic(node, neighbor)
+        local tentative_g = node.g + self.heuristic(node, neighbor)
         if not neighbor.opened or tentative_g < neighbor.g then
           neighbor.parent = node
           neighbor.g = tentative_g
@@ -95,12 +95,13 @@ function Astar:findPath(start, goal)
           if not neighbor.opened then
             neighbor.opened = true
             self.openList:push(neighbor)
+          else
+            self.openList:sort(neighbor)
           end
         end
       end
     end
   end
-
 end
 
 return Astar

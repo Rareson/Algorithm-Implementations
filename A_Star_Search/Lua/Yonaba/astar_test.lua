@@ -26,27 +26,34 @@ end
 
 run('Testing linear graph', function()
   local comp = function(a, b) return a.value == b end
-  local ln_handler = require 'linear_handler'
+  local ln_handler = require 'handlers.linear_handler'
   local astar = Astar(ln_handler)
-  assert(same(astar:findPath(0,5),  {0,1,2,3,4,5},     comp))
-  assert(same(astar:findPath(-2,2), {-2, -1, 0, 1, 2}, comp))
+  ln_handler.init(-2,5)
+  local start, goal = ln_handler.getNode(0), ln_handler.getNode(5)
+  assert(same(astar:findPath(start, goal),  {0,1,2,3,4,5}, comp))
+
+  start, goal = ln_handler.getNode(-2), ln_handler.getNode(2)
+  assert(same(astar:findPath(start, goal),  {-2,-1,0,1,2}, comp))
 end)
 
 run('Testing grid graph', function()
   local comp = function(a, b) return a.x == b[1] and a.y == b[2] end
-  local gm_handler = require 'gridmap_handler'
+  local gm_handler = require 'handlers.gridmap_handler'
   local astar = Astar(gm_handler)
-  gm_handler.map = {{0,0,0,0,0},{0,1,1,1,1},{0,0,0,0,0}}
+  local map = {{0,0,0,0,0},{0,1,1,1,1},{0,0,0,0,0}}
+  gm_handler.init(map)
 
   gm_handler.diagonal = false
-  assert(same(astar:findPath({1,1},{5,3}), {{1,1},{1,2},{1,3},{2,3},{3,3},{4,3},{5,3}}, comp))
+  local start, goal = gm_handler.getNode(1,1), gm_handler.getNode(5,3)
+  assert(same(astar:findPath(start, goal), {{1,1},{1,2},{1,3},{2,3},{3,3},{4,3},{5,3}}, comp))
+
   gm_handler.diagonal = true
-  assert(same(astar:findPath({1,1},{5,3}), {{1,1},{1,2},{2,3},{3,3},{4,3},{5,3}},       comp))
+  assert(same(astar:findPath(start, goal), {{1,1},{1,2},{2,3},{3,3},{4,3},{5,3}},       comp))
 end)
 
 run('Testing point graph', function()
   local comp = function(a, b) return a.x == b[1] and a.y == b[2] end
-  local pg_handler = require 'point_graph_handler'
+  local pg_handler = require 'handlers.point_graph_handler'
   local astar = Astar(pg_handler)
 
   pg_handler.addNode('a')
@@ -61,12 +68,13 @@ run('Testing point graph', function()
   pg_handler.addEdge('d', 'e', 5)
 
   local comp = function(a, b) return a.name == b end
-  assert(same(astar:findPath('a','e'),{'a','c','d','e'}, comp))
+  local start, goal = pg_handler.getNode('a'), pg_handler.getNode('e')
+  assert(same(astar:findPath(start, goal), {'a','c','d','e'}, comp))
 
   pg_handler.setEdgeWeight('a', 'b', 1)
   pg_handler.setEdgeWeight('b', 'e', 1)
 
-  assert(same(astar:findPath('a','e'),{'a','b','e'}, comp))
+  assert(same(astar:findPath(start, goal), {'a','b','e'},     comp))
 end)
 
 print(('-'):rep(80))
